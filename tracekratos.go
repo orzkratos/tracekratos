@@ -19,9 +19,9 @@ type Config struct {
 	FormatArgs   func(req any) string
 }
 
-func NewConfig() *Config {
+func NewConfig(keyName string) *Config {
 	return &Config{
-		TraceKeyName: "X-B3-TraceId",
+		TraceKeyName: keyName,
 		NewTraceID: func(ctx context.Context) string {
 			return strconv.FormatInt(time.Now().UnixNano(), 10)
 		},
