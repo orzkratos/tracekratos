@@ -34,24 +34,25 @@ func NewConfig(keyName string) *Config {
 func NewTraceMiddleware(config *Config, logger log.Logger) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req any) (reply any, err error) {
-			if info, ok := transport.FromServerContext(ctx); ok {
-				traceId := info.RequestHeader().Get(config.TraceKeyName)
-				if traceId == "" {
-					traceId = config.NewTraceID(ctx)
-					info.RequestHeader().Set(config.TraceKeyName, traceId)
+			if tsp, ok := transport.FromServerContext(ctx); ok {
+				traceID := tsp.RequestHeader().Get(config.TraceKeyName)
+				if traceID == "" {
+					traceID = config.NewTraceID(ctx)
+					tsp.RequestHeader().Set(config.TraceKeyName, traceID)
 				}
 
-				kind := info.Kind().String()
-				operation := info.Operation()
+				kind := tsp.Kind().String()
+				operation := tsp.Operation()
 
 				startTime := time.Now()
+				//cp from: https://github.com/go-kratos/kratos/blob/15dd2f638e3d53d059913ca83818f5843d67a277/middleware/logging/logging.go#L47
 				//cp from: https://github.com/go-kratos/kratos/blob/15dd2f638e3d53d059913ca83818f5843d67a277/middleware/logging/logging.go#L87
 				log.NewHelper(log.WithContext(ctx, logger)).Log(log.LevelInfo,
 					"kind", "server",
 					"component", kind,
 					"operation", operation,
 					"args", config.FormatArgs(req),
-					"trace", traceId,
+					"trace", traceID,
 					"startTime", startTime.Format(time.RFC3339Nano),
 				)
 			}
@@ -60,7 +61,8 @@ func NewTraceMiddleware(config *Config, logger log.Logger) middleware.Middleware
 	}
 }
 
-// ExtractArgs returns the string of the req. cp from: https://github.com/go-kratos/kratos/blob/15dd2f638e3d53d059913ca83818f5843d67a277/middleware/logging/logging.go#L102
+// ExtractArgs returns the string of the req-param.
+// cp from: https://github.com/go-kratos/kratos/blob/15dd2f638e3d53d059913ca83818f5843d67a277/middleware/logging/logging.go#L102
 func ExtractArgs(req any) string {
 	if redacter, ok := req.(logging.Redacter); ok {
 		return redacter.Redact()
